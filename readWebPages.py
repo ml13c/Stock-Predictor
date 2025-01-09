@@ -1,38 +1,53 @@
 from bs4 import BeautifulSoup
 import requests
 
-# Fetch the page content with headers
-url = "https://finviz.com/news.ashx"
+url = "https://finviz.com/news.ashx?v=3"
+
+# Define headers to make the request look like it’s coming from a real browser
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"
 }
 
+
 response = requests.get(url, headers=headers)
 
-# Check the response status
+# Check if the request was successful
 if response.status_code == 200:
+    # parse html
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # print each article title by row
-    rows = soup.find_all("tr", class_="styled-row is-hoverable is-bordered is-rounded is-border-top is-hover-borders has-color-text news_table-row")
+    # Find all containers that hold news badges/locate individual articles
+    rows = soup.find_all("div", class_="news-badges-container")
+
     article_titles = []
-    article_tickers =[]
+    article_tickers = []
+    article_links = []
+
+    # Loop through each container/article
     for row in rows:
-        link = row.find("a", class_="nn-tab-link")        
-        if link:
-            article_titles.append(link.text.strip())
+        # <a> tag holds the article title
+        link_tag = row.find("a", class_="nn-tab-link")
+        # <a> tag identifies the stock symbol
+        ticker_tag = row.find("a", class_="fv-label stock-news-label is-opaque is-neutral")
 
-tickerLookup = "NVDA"#desired ticker or stocks
-article_tickers =[]
+        # only process if both a title link and ticker are found
+        if link_tag and ticker_tag:
+            # article title from the link tag
+            title = link_tag.text.strip()
+            # stock ticker text
+            ticker = ticker_tag.text.strip()
+            # Build full URL for the article
+            link = "https://finviz.com" + link_tag["href"]
 
-#print out each article title
-for title in article_titles:
-    print(title)
-  #  for tag in ticker_tags:
-      #  print(ticker)
-    print()
+            article_titles.append(title)
+            article_tickers.append(ticker)
+            article_links.append(link)
 
+    for title, ticker, link in zip(article_titles, article_tickers, article_links):
+        print(f"Title: {title}")  # Print the article title
+        print(f"Ticker: {ticker}")  # Print the stock ticker
+        print(f"Link: {link}\n")  # Print the full link to the article
 
 else:
-    print(f"he wroih")
-
+    # If the request fails, print the HTTP status code for debugging
+    print(f"Failed to fetch the page. Status code: {response.status_code}")
