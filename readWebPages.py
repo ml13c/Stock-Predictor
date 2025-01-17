@@ -40,7 +40,7 @@ if response.status_code == 200:
         if link_tag and ticker_tag:
             title = link_tag.text.strip()
             ticker = ticker_tag.text.strip()
-            link = "https://finviz.com" + link_tag["href"]
+            link = link_tag["href"]
 
             article_titles.append(title)
             article_tickers.append(ticker)
