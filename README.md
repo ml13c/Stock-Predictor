@@ -7,6 +7,8 @@ breakdown plan of stock project
             -any possible reveals or announcements
             -twitter pages for speculation and reputation (wont be as heavy in deciding price prediction unless credible source)
 
+NOT YET COMBINED/FINISHED
+
                 ##
                 GENERAL-look up stock-->send to gpt classifier-->classify as a stock type-->look up in google stock type related news-->send data to gpt to summarize-->parse and prepare data
                     -->(or just) send to gpt to analyze data-->set articles into table that gives a score--> determine table value based off of overall pos and neg scores
