@@ -1,0 +1,125 @@
+from nltk.sentiment import SentimentIntensityAnalyzer
+import pandas as pd
+from bs4 import BeautifulSoup
+sia = SentimentIntensityAnalyzer()
+from bs4 import BeautifulSoup  # parses html and extracts data
+import requests  
+import re #as long as name remains consistent it can find it alone without 
+        # having to implement a checkpoint for class html
+        #prompt for ticker/stock name
+        #from here it will categorize it based off of what type of company it is off a search and compare stocks
+        # with the most relevant stock(s)
+
+desired_Ticker = 'NVDA'
+#lookup for ticker group
+#lookup for top performing stocks in that group and set to related tickers
+related_Tickers = []
+#monitor related ticker performance every couple hours not as much for desired one
+# Set the URL for the "Stocks News" tab on Finviz
+url = "https://finviz.com/news.ashx?v=3"
+
+# doesnt get blocked when running
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"
+}
+
+response = requests.get(url, headers=headers)
+
+if response.status_code == 200:
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # url I provided sends it straight to stock news so it just looks for news container class
+    #this shouldnt change in the html but keep in mind it can change if any errors
+    rows = soup.find_all("div", class_="news-badges-container")
+
+    article_titles = []
+    article_tickers = []
+    article_links = []
+
+    # go through each news article in the container
+        #TODO
+            #   This should probably be set to occur as often as possible if trading real time ?
+            #   maybe too many requests and might get blocked though
+            #   Check every 1-3 hours for the previous request top article and if it has moved down in the new 
+            #   request title array a significant amount then get the links and tickers to process
+        
+
+    for row in rows:        
+        link_tag = row.find("a", class_=re.compile("nn-tab-link"))
+        # Find all ticker tags that match the pattern within the same row
+        ticker_tags = row.find_all("a", class_=re.compile("fv-label stock-news-label"))
+        
+        # Only process the row if both a title link and at least one ticker are found
+        if link_tag and ticker_tags:
+            title = link_tag.text.strip()
+            link = link_tag["href"]
+            
+            # Iterate through all ticker tags and process each one
+            for ticker_tag in ticker_tags:
+                ticker = ticker_tag.text.strip()
+                article_titles.append(title)
+                article_tickers.append(ticker)
+                article_links.append(link)
+
+for title, ticker, link in zip(article_titles, article_tickers, article_links):
+    print(f"Title: {title}")  # Print the article title
+    print(f"Ticker: {ticker}")  # Print the stock ticker
+    print(f"Link: {link}\n")  # Print the full link to the article
+for title, ticker, link in zip(article_titles, article_tickers, article_links):
+    #if a relevant ticker is found it will analyze the corresponding article link for it
+    if 'NVDA' in ticker:
+        print(f"Analyzing: {title}")
+        
+        url = link
+        #this might be necessary to avoid ip ban not sure(dont want to try out of fear)
+        response = requests.get(url, headers=headers)
+
+        # this will vary from website to website since their 
+        # class names will be different so might have to train a model/find another way
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+
+            # Find the main body text of the article
+            btexts = soup.find_all("p")  # most just use p tags to pump the info out fast
+            body_text = [text.get_text(strip=True) for text in btexts]
+            combined_text = " ".join(body_text)
+            print("Extracted Text:", combined_text)
+        else:
+            print(f"Failed to fetch the page. Status code: {response.status_code}")
+            body_text = []
+
+        # Example list of text pieces
+        texts = body_text  # List of paragraphs extracted
+
+        # Analyze sentiment for each text
+        results = []
+        for text in texts:
+            sentiment_score = sia.polarity_scores(text)  # get scores
+            # set sentiment category(might have to change once I learn more about stocks)
+            if sentiment_score['compound'] > 0.05:  # Positive threshold
+                sentiment = 'positive'
+            elif sentiment_score['compound'] < -0.05:  # Negative threshold
+                sentiment = 'negative'
+            else:
+                sentiment = 'neutral'
+            # Append the result
+            results.append({'Text': text, 'Sentiment': sentiment})
+
+        # data frame 
+        df = pd.DataFrame(results)
+
+        # occurence count of each sentiment category
+        if not df.empty:
+            sentiment_counts = df['Sentiment'].value_counts()
+            print("Sentiment Counts:")
+            print(sentiment_counts)
+
+            # Optional: Display results for verification
+            print("\nDetailed Results:")
+            print(df)
+        else:
+            print("No text was analyzed.")
+
+    elif related_Tickers in article_tickers:
+        print("hi")
+
